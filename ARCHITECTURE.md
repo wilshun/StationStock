@@ -1,5 +1,33 @@
 # StationStock Core Backend Architecture
 
+## Frontend architecture
+
+The App Router frontend is a client-rendered authenticated application shell.
+Small reusable hooks call a central typed fetch client; local component state is
+used for filters and in-progress forms rather than adding a global state library.
+This keeps invalidation explicit after mutations and avoids a cache layer that is
+not yet justified by the Core MVP's scale. Searchable product filters are stored
+in the URL so links and refreshes preserve context.
+
+The root auth provider calls `/auth/me` before protected content renders. Login
+and logout go through the backend, while the JWT remains exclusively in an
+HTTP-only cookie. Every API request uses `credentials: include`. A 401 broadcasts
+one session-expired event, clears the in-memory user, and redirects to login;
+there is no token refresh loop or browser storage. Protected routes prevent data
+flashes, manager guards protect administrative pages, and role-aware navigation
+hides actions that the backend would reject. Backend authorization remains the
+security boundary—the UI is only a usability layer.
+
+Inventory-count pages keep unsaved input locally and upsert each quantity to the
+backend on an explicit Save action. Successful responses replace the local draft
+snapshot; failed saves leave the typed value visible. Submission requires a
+confirmation and replaces the page state with the backend's immutable submitted
+representation. Official inventory is never calculated in the browser.
+
+API `null` inventory values are rendered as **Uncounted**, never coerced to zero.
+Low-stock order and reorder quantities are consumed directly from backend
+responses, preserving a single source of business truth.
+
 ## Request flow and module boundaries
 
 Requests enter FastAPI through `app.main`, pass CORS and authentication middleware,

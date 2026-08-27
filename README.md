@@ -2,6 +2,67 @@
 
 Inventory and restocking management system for a gas station convenience store.
 
+StationStock now includes a responsive Next.js 16 frontend (React 19, strict
+TypeScript, Tailwind CSS, shadcn/ui, React Hook Form, and Zod) backed by FastAPI,
+SQLAlchemy, Alembic, and PostgreSQL 17. Use Node.js 24 LTS for frontend work.
+
+## Frontend setup
+
+From the repository root:
+
+```powershell
+Copy-Item frontend/.env.example frontend/.env.local
+Set-Location frontend
+npm install
+npm run dev
+```
+
+The browser application runs at `http://localhost:3000` and expects the API at
+`http://localhost:8000/api/v1`. The API must be configured with
+`ALLOWED_FRONTEND_ORIGIN=http://localhost:3000`; requests include the HTTP-only
+authentication cookie automatically.
+
+Frontend quality commands:
+
+```sh
+npm run lint
+npm run typecheck
+npm test
+npm run build
+```
+
+Main routes are `/login`, `/dashboard`, `/products`, `/products/new`,
+`/products/{id}`, `/products/{id}/edit`, `/categories`, `/vendors`, `/users`,
+`/inventory-counts`, `/inventory-counts/new`, `/inventory-counts/{id}`, and
+`/alerts/low-stock`. Catalog mutations and user administration are manager-only.
+Both roles may create counts; employees may edit only drafts they started.
+
+## Full application with Docker Compose
+
+Start PostgreSQL, apply migrations, and launch the backend and frontend:
+
+```sh
+docker compose up --build
+```
+
+View health and container status with `docker compose ps`, and stop the stack
+without removing database data with `docker compose down`. The named
+`stationstock_postgres_data` volume persists PostgreSQL state. Seed demo data
+after the backend becomes healthy:
+
+```sh
+docker compose exec backend python -m app.scripts.seed_demo_data
+```
+
+Then sign in at `http://localhost:3000` with the development credentials below.
+See `DEMO_GUIDE.md` for a five-minute walkthrough and
+`MANUAL_ACCEPTANCE_CHECKLIST.md` for browser checks.
+
+Known Core MVP limitations: inventory is based on whole-number quantities;
+catalog selectors load the first 100 active records; there is no expiration,
+purchase-order, delivery, barcode, offline, or automatic retry functionality.
+Screenshots: _add portfolio screenshots here after running the seeded stack._
+
 ## Goal
 
 Help employees track stock, identify low inventory, monitor expiration dates, and verify vendor deliveries.
