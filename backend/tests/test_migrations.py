@@ -18,10 +18,10 @@ def make_alembic_config(*, output_buffer: StringIO | None = None) -> Config:
     )
 
 
-def test_authentication_migration_is_the_only_head() -> None:
+def test_core_mvp_migration_is_the_only_head() -> None:
     script = ScriptDirectory.from_config(make_alembic_config())
 
-    assert script.get_heads() == ["797a680c2300"]
+    assert script.get_heads() == ["0de475186ebf"]
 
 
 def test_initial_migration_generates_core_schema_sql(monkeypatch) -> None:
@@ -57,6 +57,9 @@ def test_initial_migration_generates_core_schema_sql(monkeypatch) -> None:
     assert "uq_inventory_count_items_count_product" in migration_sql
     assert "ADD COLUMN password_hash VARCHAR(255)" in migration_sql
     assert "CREATE UNIQUE INDEX uq_users_email_lower" in migration_sql
+    assert "CREATE TYPE inventory_count_status" in migration_sql
+    assert "ADD COLUMN description TEXT" in migration_sql
+    assert "ADD COLUMN submitted_at TIMESTAMP WITH TIME ZONE" in migration_sql
 
 
 def test_authentication_migration_generates_downgrade_sql(monkeypatch) -> None:
@@ -79,3 +82,26 @@ def test_authentication_migration_generates_downgrade_sql(monkeypatch) -> None:
     migration_sql = output.getvalue()
     assert "DROP INDEX uq_users_email_lower" in migration_sql
     assert "ALTER TABLE users DROP COLUMN password_hash" in migration_sql
+
+
+def test_core_mvp_migration_generates_downgrade_sql(monkeypatch) -> None:
+    output = StringIO()
+    monkeypatch.setenv(
+        "DATABASE_URL",
+        "postgresql+psycopg://stationstock:test@localhost:5432/stationstock_test",
+    )
+    get_settings.cache_clear()
+
+    try:
+        command.downgrade(
+            make_alembic_config(output_buffer=output),
+            "0de475186ebf:797a680c2300",
+            sql=True,
+        )
+    finally:
+        get_settings.cache_clear()
+
+    migration_sql = output.getvalue()
+    assert "DROP TYPE inventory_count_status" in migration_sql
+    assert "ALTER TABLE inventory_counts DROP COLUMN submitted_at" in migration_sql
+    assert "ALTER TABLE products DROP COLUMN description" in migration_sql

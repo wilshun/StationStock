@@ -79,13 +79,13 @@ def test_model_relationships_are_bidirectional() -> None:
         minimum_quantity=2,
         target_quantity=12,
     )
-    inventory_count = InventoryCount(counted_by=user)
+    inventory_count = InventoryCount(started_by=user)
     item = InventoryCountItem(product=product, quantity=8)
     inventory_count.items.append(item)
 
     assert product in category.products
     assert product in vendor.preferred_products
-    assert inventory_count in user.inventory_counts
+    assert inventory_count in user.started_inventory_counts
     assert item.inventory_count is inventory_count
     assert item in product.inventory_count_items
 
@@ -128,7 +128,7 @@ def test_inventory_count_item_rejects_negative_quantity(db_session: Session) -> 
         target_quantity=6,
     )
     inventory_count = InventoryCount(
-        counted_by=user,
+        started_by=user,
         items=[InventoryCountItem(product=product, quantity=-1)],
     )
     db_session.add(inventory_count)
@@ -152,7 +152,7 @@ def test_inventory_count_rejects_duplicate_products(db_session: Session) -> None
         target_quantity=6,
     )
     inventory_count = InventoryCount(
-        counted_by=user,
+        started_by=user,
         items=[
             InventoryCountItem(product=product, quantity=4),
             InventoryCountItem(product=product, quantity=5),
