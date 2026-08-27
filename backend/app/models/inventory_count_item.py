@@ -3,7 +3,7 @@ from __future__ import annotations
 import uuid
 from typing import TYPE_CHECKING
 
-from sqlalchemy import CheckConstraint, ForeignKey, Integer, UniqueConstraint
+from sqlalchemy import CheckConstraint, ForeignKey, Integer, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
@@ -35,6 +35,7 @@ class InventoryCountItem(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         index=True,
     )
     quantity: Mapped[int] = mapped_column(Integer, nullable=False)
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     inventory_count: Mapped[InventoryCount] = relationship(back_populates="items")
     product: Mapped[Product] = relationship(back_populates="inventory_count_items")

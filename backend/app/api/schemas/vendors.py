@@ -1,0 +1,52 @@
+import uuid
+from datetime import datetime
+
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+
+class VendorResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    name: str
+    contact_name: str | None
+    phone: str | None
+    email: str | None
+    notes: str | None
+    is_active: bool
+    created_at: datetime
+    updated_at: datetime
+
+
+class VendorSummary(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    name: str
+
+
+class VendorCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=200)
+    contact_name: str | None = Field(default=None, max_length=200)
+    phone: str | None = Field(default=None, max_length=50)
+    email: str | None = Field(default=None, max_length=320)
+    notes: str | None = None
+
+    @field_validator("name")
+    @classmethod
+    def strip_name(cls, name: str) -> str:
+        return name.strip()
+
+
+class VendorUpdate(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=200)
+    contact_name: str | None = Field(default=None, max_length=200)
+    phone: str | None = Field(default=None, max_length=50)
+    email: str | None = Field(default=None, max_length=320)
+    notes: str | None = None
+    is_active: bool | None = None
+
+    @field_validator("name")
+    @classmethod
+    def strip_name(cls, name: str | None) -> str | None:
+        return name.strip() if name is not None else None

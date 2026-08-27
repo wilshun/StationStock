@@ -3,8 +3,18 @@ from __future__ import annotations
 import uuid
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, CheckConstraint, ForeignKey, Integer, String, UniqueConstraint
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy import (
+    Boolean,
+    CheckConstraint,
+    ForeignKey,
+    Integer,
+    Index,
+    String,
+    Text,
+    UniqueConstraint,
+    text,
+)
+from sqlalchemy.orm import Mapped, mapped_column, relationship, validates
 
 from app.models.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
 
@@ -18,6 +28,7 @@ class Product(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "products"
     __table_args__ = (
         UniqueConstraint("sku", name="uq_products_sku"),
+        Index("uq_products_sku_lower", text("lower(sku)"), unique=True),
         CheckConstraint("minimum_quantity >= 0", name="minimum_quantity_nonnegative"),
         CheckConstraint(
             "target_quantity >= minimum_quantity",
@@ -27,6 +38,8 @@ class Product(UUIDPrimaryKeyMixin, TimestampMixin, Base):
 
     sku: Mapped[str] = mapped_column(String(100), nullable=False)
     name: Mapped[str] = mapped_column(String(200), nullable=False)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    unit_description: Mapped[str | None] = mapped_column(String(100), nullable=True)
     category_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("categories.id", ondelete="RESTRICT"),
         nullable=False,
@@ -54,6 +67,7 @@ class Product(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         nullable=False,
         default=True,
         server_default="true",
+        index=True,
     )
 
     category: Mapped[Category] = relationship(back_populates="products")
@@ -61,3 +75,11 @@ class Product(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     inventory_count_items: Mapped[list[InventoryCountItem]] = relationship(
         back_populates="product"
     )
+
+    @validates("sku")
+    def normalize_sku(self, _key: str, sku: str) -> str:
+        return sku.strip().upper()
+
+    @validates("name")
+    def normalize_name(self, _key: str, name: str) -> str:
+        return name.strip()

@@ -36,16 +36,23 @@ class User(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         nullable=False,
         default=UserRole.EMPLOYEE,
         server_default=UserRole.EMPLOYEE.value,
+        index=True,
     )
     is_active: Mapped[bool] = mapped_column(
         Boolean,
         nullable=False,
         default=True,
         server_default="true",
+        index=True,
     )
 
-    inventory_counts: Mapped[list[InventoryCount]] = relationship(
-        back_populates="counted_by"
+    started_inventory_counts: Mapped[list[InventoryCount]] = relationship(
+        back_populates="started_by",
+        foreign_keys="InventoryCount.started_by_user_id",
+    )
+    submitted_inventory_counts: Mapped[list[InventoryCount]] = relationship(
+        back_populates="submitted_by",
+        foreign_keys="InventoryCount.submitted_by_user_id",
     )
 
     @validates("email")
