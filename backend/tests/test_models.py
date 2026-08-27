@@ -52,8 +52,23 @@ def test_required_unique_constraints_are_present() -> None:
         assert constraint_name in constraint_names
 
 
+def test_user_email_is_normalized() -> None:
+    user = User(
+        email="  Manager@StationStock.Local  ",
+        full_name="Store Manager",
+        password_hash="test-password-hash",
+    )
+
+    assert user.email == "manager@stationstock.local"
+
+
 def test_model_relationships_are_bidirectional() -> None:
-    user = User(email="manager@example.com", full_name="Store Manager", role=UserRole.MANAGER)
+    user = User(
+        email="manager@example.com",
+        full_name="Store Manager",
+        password_hash="test-password-hash",
+        role=UserRole.MANAGER,
+    )
     category = Category(name="Beverages")
     vendor = Vendor(name="Preferred Supplier")
     product = Product(
@@ -99,7 +114,11 @@ def test_product_rejects_invalid_quantity_thresholds(
 
 
 def test_inventory_count_item_rejects_negative_quantity(db_session: Session) -> None:
-    user = User(email="employee@example.com", full_name="Store Employee")
+    user = User(
+        email="employee@example.com",
+        full_name="Store Employee",
+        password_hash="test-password-hash",
+    )
     category = Category(name="Household")
     product = Product(
         sku="HOU-001",
@@ -119,7 +138,11 @@ def test_inventory_count_item_rejects_negative_quantity(db_session: Session) -> 
 
 
 def test_inventory_count_rejects_duplicate_products(db_session: Session) -> None:
-    user = User(email="employee@example.com", full_name="Store Employee")
+    user = User(
+        email="employee@example.com",
+        full_name="Store Employee",
+        password_hash="test-password-hash",
+    )
     category = Category(name="Household")
     product = Product(
         sku="HOU-001",
