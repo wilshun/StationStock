@@ -1,0 +1,10 @@
+import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { describe, expect, it, vi } from "vitest";
+import CountDetailPage from "./page";
+const apiFetch=vi.fn();
+vi.mock("@/lib/api/client",()=>({apiFetch:(...args:unknown[])=>apiFetch(...args),ApiError:class extends Error{}}));
+vi.mock("@/components/auth/auth-provider",()=>({useAuth:()=>({user:{id:"u1",role:"employee"}})}));
+const draft={id:"count-1",status:"draft",started_by:{id:"u1",email:"e@test",full_name:"Employee",role:"employee"},submitted_by:null,notes:null,submitted_at:null,created_at:"2026-01-01T11:00:00Z",updated_at:"2026-01-01T11:00:00Z",items:[]};
+vi.mock("@/lib/hooks/use-api-query",()=>({useApiQuery:(path:string)=>({loading:false,error:null,reload:vi.fn(),setData:vi.fn(),data:path.startsWith("/inventory-counts")?draft:path.startsWith("/products")?{items:[{id:"p1",sku:"SKU-1",name:"Water",description:null,unit_description:"bottle",minimum_quantity:1,target_quantity:10,is_active:true,category:{id:"c",name:"Drinks"},preferred_vendor:null,latest_quantity:null,latest_count_at:null,is_counted:false,is_low_stock:null,recommended_reorder_quantity:null,created_at:"",updated_at:""}],total:1}:{items:[{id:"c",name:"Drinks"}]}})}));
+describe("inventory draft",()=>{it("saves an entered quantity and confirms submission",async()=>{apiFetch.mockResolvedValue(draft);render(<CountDetailPage/>);await userEvent.type(screen.getByPlaceholderText("Qty"),"4");await userEvent.click(screen.getByRole("button",{name:"Save"}));await waitFor(()=>expect(apiFetch).toHaveBeenCalledWith("/inventory-counts/count-1/items/p1",expect.objectContaining({method:"PUT",body:{quantity:4}})));await userEvent.click(screen.getByRole("button",{name:"Review and submit"}));expect(screen.getByText("Submit this inventory count?")).toBeVisible();await userEvent.click(screen.getByRole("button",{name:"Submit count"}));await waitFor(()=>expect(apiFetch).toHaveBeenCalledWith("/inventory-counts/count-1/submit",{method:"POST"}))})});
