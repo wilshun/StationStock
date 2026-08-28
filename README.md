@@ -103,6 +103,12 @@ Start PostgreSQL in the background:
 docker compose up -d postgres
 ```
 
+Apply migrations through the backend image (the validated Docker workflow):
+
+```sh
+docker compose run --rm backend alembic -c alembic.ini upgrade head
+```
+
 View container and health status:
 
 ```sh
@@ -149,7 +155,7 @@ Configure authentication in `backend/.env`:
 
 | Variable | Development example | Purpose |
 | --- | --- | --- |
-| `AUTH_SECRET_KEY` | `development-only-change-me` | Signs access tokens |
+| `AUTH_SECRET_KEY` | `development-only-change-me-use-32-bytes` | Signs access tokens |
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | `15` | Access-token and cookie lifetime |
 | `AUTH_COOKIE_NAME` | `stationstock_access_token` | Authentication cookie name |
 | `AUTH_COOKIE_SECURE` | `false` | Allows local HTTP cookies |
@@ -292,3 +298,8 @@ curl -b stationstock-cookies.txt http://localhost:8000/api/v1/auth/me
 Docker is required for live PostgreSQL migration, connectivity, seed, and API
 validation. The unit and HTTP behavior tests can run without Docker, but SQLite
 test databases do not replace final PostgreSQL runtime validation.
+
+## Extended MVP roadmap
+
+Expiration tracking, purchase orders, vendor deliveries, and related reporting
+are intentionally outside the validated Core MVP and have no placeholder UI.
