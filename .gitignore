@@ -9,6 +9,8 @@ __pycache__/
 # Node
 node_modules/
 .next/
+coverage/
+*.tsbuildinfo
 
 # IDE
 .vscode/
