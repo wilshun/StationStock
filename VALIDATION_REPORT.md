@@ -1,4 +1,21 @@
-# StationStock Core MVP validation report
+# StationStock Core MVP and production-readiness validation report
+
+## Production hardening (August 27, 2026)
+
+Production controls added: fail-fast settings, isolated Compose/database volume, production seed rejection, interactive first-manager bootstrap, password-change/reset session invalidation, temporary login throttling, disabled production API docs, manager-only sanitized audit logs, and PostgreSQL custom-format backup/restore procedures. Final command results are recorded after the full validation pass. Nothing in this work is deployed or pushed.
+
+Validation results:
+
+- Backend: 51 passed, 1 live-database test skipped when no host `DATABASE_URL` was supplied.
+- Frontend: 11 files and 17 tests passed.
+- ESLint and strict TypeScript: passed.
+- Next.js production build: passed; 14 routes generated.
+- `npm audit --audit-level=high`: 0 vulnerabilities.
+- Development and production Compose configuration: valid.
+- Isolated PostgreSQL 17 rehearsal: full upgrade to `c61b8e820f2a`, zero users/categories/vendors/products/counts/items after migration, production demo seed rejected, full downgrade to base, and full re-upgrade passed.
+- Temporary validation containers, network, and volumes were removed after the rehearsal.
+
+Known production limitations: login throttling is process-local and needs a shared store before horizontal scaling; the included Compose topology expects a separately managed TLS reverse proxy; a frontend audit-log page and atomic CSV product importer are deferred. The manager-only audit API is available now.
 
 Validated on August 27, 2026 in Windows with Docker Desktop.
 

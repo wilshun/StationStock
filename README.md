@@ -2,6 +2,14 @@
 
 Inventory and restocking management system for a gas station convenience store.
 
+## Environments
+
+Development is an explicit demo environment. Start it with `docker compose up --build`, then optionally run `docker compose exec backend python -m app.scripts.seed_demo_data`. Its public demo credentials and synthetic catalog must never be used against a real database.
+
+Production uses `docker-compose.prod.yml`, a separate named database volume, HTTPS origins, injected secrets, secure cookies, disabled API docs, and no seed command. Copy `.env.production.example` to the ignored `.env.production`, replace every placeholder, and keep it only in the deployment host's secret storage. Development and production must never share a database: sharing could expose demo accounts and mix synthetic inventory with store records.
+
+Validate with `docker compose --env-file .env.production -f docker-compose.prod.yml config`. After TLS, firewall, DNS, monitoring, and backup prerequisites are ready, production starts with `docker compose --env-file .env.production -f docker-compose.prod.yml up -d --build`. The backend migrates but never seeds. See `STORE_ONBOARDING.md`, `SECURITY.md`, and `BACKUP_AND_RESTORE.md` before accepting real data.
+
 StationStock now includes a responsive Next.js 16 frontend (React 19, strict
 TypeScript, Tailwind CSS, shadcn/ui, React Hook Form, and Zod) backed by FastAPI,
 SQLAlchemy, Alembic, and PostgreSQL 17. Use Node.js 24 LTS for frontend work.
@@ -150,6 +158,9 @@ The authentication endpoints are:
 - `POST /api/v1/auth/login`
 - `POST /api/v1/auth/logout`
 - `GET /api/v1/auth/me`
+- `POST /api/v1/auth/change-password`
+
+Managers reset an account through `POST /api/v1/users/{id}/reset-password`. Both password workflows invalidate existing sessions. Repeated failures cause a temporary login cooldown; see `SECURITY.md`.
 
 Configure authentication in `backend/.env`:
 
@@ -198,6 +209,12 @@ are for development only.
 Interactive OpenAPI documentation is available at `http://localhost:8000/docs`
 while the backend is running. Except for health and login, endpoints require the
 authentication cookie returned by `POST /api/v1/auth/login`.
+
+Production disables `/docs`, `/redoc`, and `/openapi.json` by default. The sanitized audit feed is manager-only at `GET /api/v1/audit-logs`.
+
+## Deferred production enhancement
+
+CSV product import is intentionally deferred to the first post-deployment enhancement. A safe implementation needs atomic import, dry-run preview, exact category/vendor matching, upload limits, duplicate-SKU checks in both file and database, row-level errors, and audit coverage. Manual catalog entry is safer for initial launch than a partial importer.
 
 | Area | Endpoints | Read access | Write access |
 | --- | --- | --- | --- |
