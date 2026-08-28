@@ -11,6 +11,7 @@ from app.api.schemas.vendors import VendorCreate, VendorResponse, VendorUpdate
 from app.auth.dependencies import CurrentUser, ManagerUser
 from app.db.session import get_db
 from app.models import Vendor
+from app.services.audit import record_audit
 
 
 router = APIRouter(prefix="/v1/vendors", tags=["vendors"])
@@ -66,13 +67,15 @@ def list_vendors(
 @router.post("", response_model=VendorResponse, status_code=status.HTTP_201_CREATED)
 def create_vendor(
     payload: VendorCreate,
-    _manager: ManagerUser,
+    manager: ManagerUser,
     db: Annotated[Session, Depends(get_db)],
 ) -> VendorResponse:
     if vendor_name_exists(db, payload.name):
         raise HTTPException(status_code=409, detail="Vendor name already exists")
     vendor = Vendor(**payload.model_dump())
     db.add(vendor)
+    db.flush()
+    record_audit(db, "vendor.created", "vendor", actor_user_id=manager.id, target_id=vendor.id)
     try:
         db.commit()
     except IntegrityError:
@@ -95,7 +98,7 @@ def get_vendor(
 def update_vendor(
     vendor_id: uuid.UUID,
     payload: VendorUpdate,
-    _manager: ManagerUser,
+    manager: ManagerUser,
     db: Annotated[Session, Depends(get_db)],
 ) -> VendorResponse:
     vendor = get_vendor_or_404(db, vendor_id)
@@ -107,6 +110,7 @@ def update_vendor(
         raise HTTPException(status_code=409, detail="Vendor name already exists")
     for field, value in payload.model_dump(exclude_unset=True).items():
         setattr(vendor, field, value)
+    record_audit(db, "vendor.updated", "vendor", actor_user_id=manager.id, target_id=vendor.id)
     try:
         db.commit()
     except IntegrityError:

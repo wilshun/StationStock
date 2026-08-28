@@ -4,6 +4,7 @@ from datetime import datetime
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.models.user import UserRole
+from app.auth.passwords import validate_password_strength
 
 
 class LoginRequest(BaseModel):
@@ -32,3 +33,13 @@ class UserResponse(BaseModel):
 
 class LogoutResponse(BaseModel):
     status: str
+
+
+class PasswordChangeRequest(BaseModel):
+    current_password: str = Field(min_length=1, max_length=1024)
+    new_password: str = Field(min_length=12, max_length=1024)
+
+    @field_validator("new_password")
+    @classmethod
+    def validate_new_password(cls, password: str) -> str:
+        return validate_password_strength(password)

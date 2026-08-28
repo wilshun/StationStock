@@ -18,10 +18,10 @@ def make_alembic_config(*, output_buffer: StringIO | None = None) -> Config:
     )
 
 
-def test_core_mvp_migration_is_the_only_head() -> None:
+def test_production_security_migration_is_the_only_head() -> None:
     script = ScriptDirectory.from_config(make_alembic_config())
 
-    assert script.get_heads() == ["0de475186ebf"]
+    assert script.get_heads() == ["c61b8e820f2a"]
 
 
 def test_initial_migration_generates_core_schema_sql(monkeypatch) -> None:
@@ -45,6 +45,7 @@ def test_initial_migration_generates_core_schema_sql(monkeypatch) -> None:
         "products",
         "inventory_counts",
         "inventory_count_items",
+        "audit_logs",
     ):
         assert f"CREATE TABLE {table_name}" in migration_sql
 

@@ -3,7 +3,7 @@ from __future__ import annotations
 from enum import StrEnum
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, Enum, Index, String, UniqueConstraint, text
+from sqlalchemy import Boolean, Enum, Index, Integer, String, UniqueConstraint, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship, validates
 
 from app.models.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
@@ -45,6 +45,7 @@ class User(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         server_default="true",
         index=True,
     )
+    auth_version: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
 
     started_inventory_counts: Mapped[list[InventoryCount]] = relationship(
         back_populates="started_by",

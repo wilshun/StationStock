@@ -22,6 +22,7 @@ from app.services.inventory import (
     latest_inventory_subquery,
     product_response,
 )
+from app.services.audit import record_audit
 
 
 router = APIRouter(prefix="/v1/products", tags=["products"])
@@ -144,7 +145,7 @@ def list_products(
 @router.post("", response_model=ProductResponse, status_code=status.HTTP_201_CREATED)
 def create_product(
     payload: ProductCreate,
-    _manager: ManagerUser,
+    manager: ManagerUser,
     db: Annotated[Session, Depends(get_db)],
 ) -> ProductResponse:
     if sku_exists(db, payload.sku):
@@ -153,6 +154,8 @@ def create_product(
     validate_vendor(db, payload.preferred_vendor_id)
     product = Product(**payload.model_dump())
     db.add(product)
+    db.flush()
+    record_audit(db, "product.created", "product", actor_user_id=manager.id, target_id=product.id, metadata={"sku": product.sku})
     try:
         db.commit()
     except IntegrityError:
@@ -181,7 +184,7 @@ def get_product(
 def update_product(
     product_id: uuid.UUID,
     payload: ProductUpdate,
-    _manager: ManagerUser,
+    manager: ManagerUser,
     db: Annotated[Session, Depends(get_db)],
 ) -> ProductResponse:
     product = get_product_or_404(db, product_id)
@@ -202,6 +205,8 @@ def update_product(
         )
     for field, value in changes.items():
         setattr(product, field, value)
+    action = "product.deactivated" if changes.get("is_active") is False else "product.updated"
+    record_audit(db, action, "product", actor_user_id=manager.id, target_id=product.id, metadata={"sku": product.sku})
     try:
         db.commit()
     except IntegrityError:

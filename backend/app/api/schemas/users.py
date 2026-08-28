@@ -4,6 +4,7 @@ from datetime import datetime
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.auth.service import normalize_email
+from app.auth.passwords import validate_password_strength
 from app.models.user import UserRole
 
 
@@ -39,8 +40,21 @@ class UserCreate(BaseModel):
     def strip_full_name(cls, full_name: str) -> str:
         return full_name.strip()
 
+    @field_validator("password")
+    @classmethod
+    def validate_password(cls, password: str) -> str:
+        return validate_password_strength(password)
+
 
 class UserUpdate(BaseModel):
     role: UserRole | None = None
     is_active: bool | None = None
-    password: str | None = Field(default=None, min_length=8, max_length=1024)
+
+
+class UserPasswordReset(BaseModel):
+    temporary_password: str = Field(min_length=12, max_length=1024)
+
+    @field_validator("temporary_password")
+    @classmethod
+    def validate_temporary_password(cls, password: str) -> str:
+        return validate_password_strength(password)

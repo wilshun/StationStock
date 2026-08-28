@@ -31,6 +31,7 @@ from app.services.inventory_counts import (
     EmptyInventoryCountError,
     submit_inventory_count as submit_inventory_count_service,
 )
+from app.services.audit import record_audit
 
 
 router = APIRouter(prefix="/v1/inventory-counts", tags=["inventory counts"])
@@ -259,6 +260,7 @@ def submit_inventory_count(
     ensure_draft_editor(inventory_count, current_user)
     try:
         submit_inventory_count_service(inventory_count, current_user)
+        record_audit(db, "inventory_count.submitted", "inventory_count", actor_user_id=current_user.id, target_id=inventory_count.id, metadata={"item_count": len(inventory_count.items)})
         db.commit()
     except EmptyInventoryCountError as exc:
         db.rollback()

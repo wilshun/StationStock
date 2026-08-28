@@ -6,6 +6,7 @@ from app.auth.passwords import hash_password
 from app.auth.service import get_user_by_email
 from app.db.session import SessionLocal, get_engine
 from app.models.user import User, UserRole
+from app.core.config import Settings, get_settings
 
 
 DEVELOPMENT_PASSWORD = "StationStockDev!2026"
@@ -38,7 +39,13 @@ class SeedResult:
     existing: tuple[str, ...]
 
 
-def seed_development_users(db: Session) -> SeedResult:
+def ensure_not_production(settings: Settings | None = None) -> None:
+    if (settings or get_settings()).environment == "production":
+        raise RuntimeError("Development seed commands are disabled in production")
+
+
+def seed_development_users(db: Session, *, settings: Settings | None = None) -> SeedResult:
+    ensure_not_production(settings)
     created: list[str] = []
     existing: list[str] = []
 
@@ -63,6 +70,10 @@ def seed_development_users(db: Session) -> SeedResult:
 
 
 def main() -> None:
+    try:
+        ensure_not_production()
+    except RuntimeError as exc:
+        raise SystemExit(str(exc)) from None
     with SessionLocal(bind=get_engine()) as db:
         result = seed_development_users(db)
 

@@ -27,12 +27,12 @@ def get_current_user(
         raise authentication_error()
 
     try:
-        user_id = decode_access_token(token, settings=settings)
+        user_id, auth_version = decode_access_token(token, settings=settings)
     except InvalidAccessTokenError:
         raise authentication_error() from None
 
     user = get_user_by_id(db, user_id)
-    if user is None or not user.is_active:
+    if user is None or not user.is_active or user.auth_version != auth_version:
         raise authentication_error()
     return user
 

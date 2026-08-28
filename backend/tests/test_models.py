@@ -34,6 +34,7 @@ def test_core_schema_contains_only_expected_tables() -> None:
         "products",
         "inventory_counts",
         "inventory_count_items",
+        "audit_logs",
     }
 
 

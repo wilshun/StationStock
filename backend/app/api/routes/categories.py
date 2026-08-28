@@ -11,6 +11,7 @@ from app.api.schemas.common import Page, PaginationParams
 from app.auth.dependencies import CurrentUser, ManagerUser
 from app.db.session import get_db
 from app.models import Category
+from app.services.audit import record_audit
 
 
 router = APIRouter(prefix="/v1/categories", tags=["categories"])
@@ -66,13 +67,15 @@ def list_categories(
 @router.post("", response_model=CategoryResponse, status_code=status.HTTP_201_CREATED)
 def create_category(
     payload: CategoryCreate,
-    _manager: ManagerUser,
+    manager: ManagerUser,
     db: Annotated[Session, Depends(get_db)],
 ) -> CategoryResponse:
     if category_name_exists(db, payload.name):
         raise HTTPException(status_code=409, detail="Category name already exists")
     category = Category(name=payload.name, description=payload.description)
     db.add(category)
+    db.flush()
+    record_audit(db, "category.created", "category", actor_user_id=manager.id, target_id=category.id)
     try:
         db.commit()
     except IntegrityError:
@@ -95,7 +98,7 @@ def get_category(
 def update_category(
     category_id: uuid.UUID,
     payload: CategoryUpdate,
-    _manager: ManagerUser,
+    manager: ManagerUser,
     db: Annotated[Session, Depends(get_db)],
 ) -> CategoryResponse:
     category = get_category_or_404(db, category_id)
@@ -106,6 +109,7 @@ def update_category(
     for field in ("description", "is_active"):
         if field in payload.model_fields_set:
             setattr(category, field, getattr(payload, field))
+    record_audit(db, "category.updated", "category", actor_user_id=manager.id, target_id=category.id)
     try:
         db.commit()
     except IntegrityError:

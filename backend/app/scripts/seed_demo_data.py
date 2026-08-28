@@ -13,7 +13,8 @@ from app.models import (
     Product,
     Vendor,
 )
-from app.scripts.seed_users import seed_development_users
+from app.scripts.seed_users import ensure_not_production, seed_development_users
+from app.core.config import Settings
 from app.services.inventory_counts import submit_inventory_count
 
 
@@ -67,8 +68,8 @@ class DemoSeedResult:
     counts_created: int
 
 
-def seed_demo_data(db: Session) -> DemoSeedResult:
-    seed_development_users(db)
+def seed_demo_data(db: Session, *, settings: Settings | None = None) -> DemoSeedResult:
+    seed_development_users(db, settings=settings)
     categories_created = 0
     vendors_created = 0
     products_created = 0
@@ -171,6 +172,10 @@ def seed_demo_data(db: Session) -> DemoSeedResult:
 
 
 def main() -> None:
+    try:
+        ensure_not_production()
+    except RuntimeError as exc:
+        raise SystemExit(str(exc)) from None
     with SessionLocal(bind=get_engine()) as db:
         result = seed_demo_data(db)
     print(

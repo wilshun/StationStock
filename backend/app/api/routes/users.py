@@ -7,12 +7,13 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.api.schemas.common import Page, PaginationParams
-from app.api.schemas.users import UserAdminResponse, UserCreate, UserUpdate
+from app.api.schemas.users import UserAdminResponse, UserCreate, UserPasswordReset, UserUpdate
 from app.auth.dependencies import ManagerUser
 from app.auth.passwords import hash_password
 from app.auth.service import get_user_by_email
 from app.db.session import get_db
 from app.models import User, UserRole
+from app.services.audit import record_audit
 
 
 router = APIRouter(prefix="/v1/users", tags=["users"])
@@ -74,6 +75,8 @@ def create_user(
         is_active=payload.is_active,
     )
     db.add(user)
+    db.flush()
+    record_audit(db, "user.created", "user", actor_user_id=_manager.id, target_id=user.id, metadata={"role": user.role.value})
     try:
         db.commit()
     except IntegrityError:
@@ -114,8 +117,23 @@ def update_user(
         user.role = payload.role
     if payload.is_active is not None:
         user.is_active = payload.is_active
-    if payload.password is not None:
-        user.password_hash = hash_password(payload.password)
+    record_audit(db, "user.account_updated", "user", actor_user_id=manager.id, target_id=user.id, metadata={"role": user.role.value, "is_active": user.is_active})
+    db.commit()
+    db.refresh(user)
+    return UserAdminResponse.model_validate(user)
+
+
+@router.post("/{user_id}/reset-password", response_model=UserAdminResponse)
+def reset_user_password(
+    user_id: uuid.UUID,
+    payload: UserPasswordReset,
+    manager: ManagerUser,
+    db: Annotated[Session, Depends(get_db)],
+) -> UserAdminResponse:
+    user = get_user_or_404(db, user_id)
+    user.password_hash = hash_password(payload.temporary_password)
+    user.auth_version += 1
+    record_audit(db, "user.password_reset", "user", actor_user_id=manager.id, target_id=user.id)
     db.commit()
     db.refresh(user)
     return UserAdminResponse.model_validate(user)

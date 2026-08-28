@@ -13,6 +13,7 @@ class InvalidAccessTokenError(ValueError):
 def create_access_token(
     user_id: uuid.UUID,
     *,
+    auth_version: int = 0,
     settings: Settings | None = None,
     expires_delta: timedelta | None = None,
     now: datetime | None = None,
@@ -28,6 +29,7 @@ def create_access_token(
         "type": "access",
         "iat": issued_at,
         "exp": expires_at,
+        "ver": auth_version,
     }
     return jwt.encode(
         payload,
@@ -40,7 +42,7 @@ def decode_access_token(
     token: str,
     *,
     settings: Settings | None = None,
-) -> uuid.UUID:
+) -> tuple[uuid.UUID, int]:
     auth_settings = settings or get_settings()
     try:
         payload = jwt.decode(
@@ -51,6 +53,6 @@ def decode_access_token(
         )
         if payload["type"] != "access":
             raise InvalidAccessTokenError("Unexpected token type")
-        return uuid.UUID(payload["sub"])
+        return uuid.UUID(payload["sub"]), int(payload.get("ver", 0))
     except (jwt.InvalidTokenError, KeyError, TypeError, ValueError) as exc:
         raise InvalidAccessTokenError("Invalid or expired access token") from exc

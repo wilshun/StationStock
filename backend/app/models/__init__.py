@@ -1,4 +1,5 @@
 from app.models.base import Base
+from app.models.audit_log import AuditLog
 from app.models.category import Category
 from app.models.inventory_count import InventoryCount, InventoryCountStatus
 from app.models.inventory_count_item import InventoryCountItem
@@ -8,6 +9,7 @@ from app.models.vendor import Vendor
 
 __all__ = [
     "Base",
+    "AuditLog",
     "Category",
     "InventoryCount",
     "InventoryCountStatus",
