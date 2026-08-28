@@ -21,7 +21,7 @@ services:
       context: ./backend
     environment:
       DATABASE_URL: postgresql+psycopg://stationstock:stationstock_dev@postgres:5432/stationstock
-      AUTH_SECRET_KEY: development-only-change-me
+      AUTH_SECRET_KEY: development-only-change-me-use-32-bytes
       AUTH_COOKIE_SECURE: "false"
       ALLOWED_FRONTEND_ORIGIN: http://localhost:3000
     command: ["sh", "-c", "alembic -c alembic.ini upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"]

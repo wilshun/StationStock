@@ -21,7 +21,7 @@ class Settings(BaseSettings):
     app_name: str = "StationStock API"
     database_url: str | None = Field(default=None, validation_alias="DATABASE_URL")
     auth_secret_key: SecretStr = Field(
-        default=SecretStr("development-only-change-me"),
+        default=SecretStr("development-only-change-me-use-32-bytes"),
         validation_alias="AUTH_SECRET_KEY",
     )
     access_token_expire_minutes: int = Field(
@@ -49,7 +49,7 @@ class Settings(BaseSettings):
     @model_validator(mode="after")
     def enforce_production_auth_safety(self) -> "Settings":
         if self.environment.lower() == "production":
-            if self.auth_secret_key.get_secret_value() == "development-only-change-me":
+            if self.auth_secret_key.get_secret_value() == "development-only-change-me-use-32-bytes":
                 raise ValueError("AUTH_SECRET_KEY must be changed in production")
             self.auth_cookie_secure = True
         return self
