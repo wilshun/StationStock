@@ -1,4 +1,4 @@
-# StationStock Core Backend Architecture
+# StationStock architecture
 
 ## Frontend architecture
 

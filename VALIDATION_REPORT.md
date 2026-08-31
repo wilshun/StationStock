@@ -1,8 +1,27 @@
-# StationStock Core MVP and production-readiness validation report
+# StationStock validation report
+
+## Production pilot (August 31, 2026)
+
+StationStock is deployed as a production-style pilot on one Amazon Linux 2023 EC2 instance in `us-east-1`. Caddy terminates trusted HTTPS, Docker Compose runs the Next.js, FastAPI, and PostgreSQL services, encrypted EBS stores the database volume, and scheduled custom-format PostgreSQL backups upload to private, versioned S3 storage.
+
+Post-deployment validation confirmed:
+
+- All four containers are healthy and the systemd service and backup timer are active.
+- HTTPS health returns 200; HTTP redirects to HTTPS.
+- PostgreSQL and SSH are not publicly exposed; only ports 80 and 443 are allowed.
+- Alembic is at `c61b8e820f2a (head)`.
+- Users, categories, vendors, products, inventory counts, count items, and audit logs contain zero rows.
+- Production demo seeding exits unsuccessfully with the expected production guard.
+- Demo credentials are absent from the optimized production build and public login page, and a demo login receives 401.
+- `/docs`, `/redoc`, and `/openapi.json` return 404.
+- The exact HTTPS CORS origin is allowed and an unrelated origin is rejected.
+- A backup uploaded successfully to S3, and the application returned healthy after an EC2 reboot.
+
+No manager or store data was created. AWS identifiers, public IP addresses, secrets, and backup object names are intentionally omitted from this public report.
 
 ## Production hardening (August 27, 2026)
 
-Production controls added: fail-fast settings, isolated Compose/database volume, production seed rejection, interactive first-manager bootstrap, password-change/reset session invalidation, temporary login throttling, disabled production API docs, manager-only sanitized audit logs, and PostgreSQL custom-format backup/restore procedures. Final command results are recorded after the full validation pass. Nothing in this work is deployed or pushed.
+Production controls added: fail-fast settings, isolated Compose/database volume, production seed rejection, interactive first-manager bootstrap, password-change/reset session invalidation, temporary login throttling, disabled production API docs, manager-only sanitized audit logs, and PostgreSQL custom-format backup/restore procedures.
 
 Validation results:
 

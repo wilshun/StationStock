@@ -4,7 +4,7 @@
 
 StationStock is a web-based inventory and replenishment platform for a real gas station convenience store in Lake Hopatcong, New Jersey. It will replace informal shelf checks, memory-based ordering, and disconnected paper counts with a simple shared system for products, stock counts, expiration dates, purchase orders, and vendor deliveries.
 
-The application will be designed for daily use by store employees and managers on phones, tablets, and desktop computers. Delivery is divided into a **Core MVP** and an **Extended MVP**. The Core MVP will establish the smallest usable inventory and replenishment system; the Extended MVP will add expiration, purchasing, and delivery controls after the core workflows are stable.
+The application will be designed for daily use by store employees and managers. Delivery is divided into a **Core MVP** and an **Extended MVP**. The Core MVP will establish the smallest usable inventory and replenishment system; the Extended MVP will add expiration, purchasing, and delivery controls after the core workflows are stable.
 
 ### Planned technology stack
 

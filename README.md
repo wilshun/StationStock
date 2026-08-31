@@ -1,322 +1,106 @@
 # StationStock
 
-Inventory and restocking management system for a gas station convenience store.
+StationStock is an inventory and restocking application designed for a local gas station. It is built around a real manual inventory workflow: employees count what is on the shelf, managers maintain the catalog, and submitted counts drive low-stock and reorder decisions.
 
-## Environments
+This repository represents a production-style pilot. It does not claim active daily use, measured adoption, or business impact.
 
-Development is an explicit demo environment. Start it with `docker compose up --build`, then optionally run `docker compose exec backend python -m app.scripts.seed_demo_data`. Its public demo credentials and synthetic catalog must never be used against a real database.
+## What it does
 
-Production uses `docker-compose.prod.yml`, a separate named database volume, HTTPS origins, injected secrets, secure cookies, disabled API docs, and no seed command. Copy `.env.production.example` to the ignored `.env.production`, replace every placeholder, and keep it only in the deployment host's secret storage. Development and production must never share a database: sharing could expose demo accounts and mix synthetic inventory with store records.
+- Supports manager and employee roles with backend-enforced authorization.
+- Lets employees save inventory-count drafts without changing official inventory.
+- Makes a submitted count immutable and uses it as the latest official quantity.
+- Flags counted products below their minimum and recommends `max(target - current, 0)` for reorder.
+- Treats products with no submitted count as **Uncounted**, not as zero stock.
+- Provides manager workflows for users, products, categories, and vendors.
+- Uses short-lived authentication in Secure, HTTP-only cookies; tokens are never stored in browser storage.
 
-Validate with `docker compose --env-file .env.production -f docker-compose.prod.yml config`. After TLS, firewall, DNS, monitoring, and backup prerequisites are ready, production starts with `docker compose --env-file .env.production -f docker-compose.prod.yml up -d --build`. The backend migrates but never seeds. See `STORE_ONBOARDING.md`, `SECURITY.md`, and `BACKUP_AND_RESTORE.md` before accepting real data.
+## Architecture
 
-StationStock now includes a responsive Next.js 16 frontend (React 19, strict
-TypeScript, Tailwind CSS, shadcn/ui, React Hook Form, and Zod) backed by FastAPI,
-SQLAlchemy, Alembic, and PostgreSQL 17. Use Node.js 24 LTS for frontend work.
-
-## Frontend setup
-
-From the repository root:
-
-```powershell
-Copy-Item frontend/.env.example frontend/.env.local
-Set-Location frontend
-npm install
-npm run dev
+```mermaid
+flowchart LR
+    Browser[Browser] -->|HTTPS 443| Caddy[Caddy reverse proxy]
+    subgraph EC2[Docker on AWS EC2]
+        Caddy --> Next[Next.js frontend]
+        Caddy -->|/api/v1/*| API[FastAPI backend]
+        API --> DB[(PostgreSQL 17)]
+    end
+    DB -->|scheduled encrypted backup| S3[(Private Amazon S3)]
 ```
 
-The browser application runs at `http://localhost:3000` and expects the API at
-`http://localhost:8000/api/v1`. The API must be configured with
-`ALLOWED_FRONTEND_ORIGIN=http://localhost:3000`; requests include the HTTP-only
-authentication cookie automatically.
+The pilot uses one encrypted-EBS EC2 instance to keep cost and operational complexity low. Only HTTP/HTTPS are public; SSH and PostgreSQL are not exposed. Caddy manages TLS, systemd restarts the Compose stack after reboot, and scheduled PostgreSQL backups upload to a private, versioned S3 bucket. See [AWS deployment](AWS_DEPLOYMENT.md), [security](SECURITY.md), and [backup and restore](BACKUP_AND_RESTORE.md).
 
-Frontend quality commands:
+## Technology
 
-```sh
-npm run lint
-npm run typecheck
-npm test
-npm run build
-```
+- Next.js 16, React 19, strict TypeScript, Tailwind CSS, React Hook Form, and Zod
+- FastAPI, SQLAlchemy, Alembic, Pydantic, and Argon2 password hashing
+- PostgreSQL 17
+- Docker Compose, Caddy, AWS EC2, encrypted EBS, Systems Manager, and S3
 
-Main routes are `/login`, `/dashboard`, `/products`, `/products/new`,
-`/products/{id}`, `/products/{id}/edit`, `/categories`, `/vendors`, `/users`,
-`/inventory-counts`, `/inventory-counts/new`, `/inventory-counts/{id}`, and
-`/alerts/low-stock`. Catalog mutations and user administration are manager-only.
-Both roles may create counts; employees may edit only drafts they started.
+## Engineering decisions
 
-## Full application with Docker Compose
+- **PostgreSQL:** relational constraints and transactions fit users, catalog records, count sessions, and immutable count history.
+- **Draft isolation:** draft quantities are incomplete work. Official inventory changes only when a count is deliberately submitted.
+- **Backend authorization:** hiding navigation improves usability but is not a security boundary, so every privileged API operation checks the authenticated role.
+- **Single EC2 pilot:** one host is inexpensive and understandable initially. The tradeoff is a single failure domain and hands-on database operations.
+- **Migration path:** the containers can move to Railway, PostgreSQL can move to RDS, or the services can move to ECS when availability and scale justify the added cost.
 
-Start PostgreSQL, apply migrations, and launch the backend and frontend:
+## Local development
+
+Requirements: Docker Desktop (or Docker Engine with Compose) and Node.js 24 LTS for direct frontend work.
 
 ```sh
 docker compose up --build
-```
-
-View health and container status with `docker compose ps`, and stop the stack
-without removing database data with `docker compose down`. The named
-`stationstock_postgres_data` volume persists PostgreSQL state. Seed demo data
-after the backend becomes healthy:
-
-```sh
 docker compose exec backend python -m app.scripts.seed_demo_data
 ```
 
-Then sign in at `http://localhost:3000` with the development credentials below.
-See `DEMO_GUIDE.md` for a five-minute walkthrough and
-`MANUAL_ACCEPTANCE_CHECKLIST.md` for browser checks.
+The seed command is explicit, development-only, and rejected when `ENVIRONMENT=production`. Development credentials and synthetic data are documented in [the demo guide](DEMO_GUIDE.md); never use them with a production database.
 
-Known Core MVP limitations: inventory is based on whole-number quantities;
-catalog selectors load the first 100 active records; there is no expiration,
-purchase-order, delivery, barcode, offline, or automatic retry functionality.
-Screenshots: _add portfolio screenshots here after running the seeded stack._
+For direct `npm run dev` frontend work, copy `frontend/.env.example` to the ignored `frontend/.env.local`. The optional demo credential panel renders only in the Next.js development server; optimized production builds remove it.
 
-## Goal
-
-Help employees track stock, identify low inventory, monitor expiration dates, and verify vendor deliveries.
-
-## Local PostgreSQL setup
-
-The local development database runs PostgreSQL 17 through Docker Compose. Install
-Docker Desktop (or Docker Engine with the Compose plugin) before continuing.
-
-Create the backend environment file from the checked-in example:
-
-```powershell
-Copy-Item backend/.env.example backend/.env
-```
-
-On macOS or Linux, use:
-
-```sh
-cp backend/.env.example backend/.env
-```
-
-The development connection uses:
-
-- Database: `stationstock`
-- Username: `stationstock`
-- Password: `stationstock_dev`
-- Host port: `5432`
-
-These credentials are intended for local development only.
-
-### Database commands
-
-Run these commands from the repository root.
-
-Start PostgreSQL in the background:
-
-```sh
-docker compose up -d postgres
-```
-
-Apply migrations through the backend image (the validated Docker workflow):
-
-```sh
-docker compose run --rm backend alembic -c alembic.ini upgrade head
-```
-
-View container and health status:
-
-```sh
-docker compose ps
-```
-
-Stop PostgreSQL without deleting its stored data:
-
-```sh
-docker compose down
-```
-
-After activating the backend virtual environment, apply all Alembic migrations:
-
-```sh
-alembic -c backend/alembic.ini upgrade head
-```
-
-Run the live database connectivity test:
-
-```sh
-python -m pytest backend/tests/test_database.py -v
-```
-
-The `stationstock_postgres_data` named volume preserves PostgreSQL data when the
-container is stopped or recreated. To intentionally remove the local database and
-all of its data, run `docker compose down --volumes`.
-
-## Authentication
-
-StationStock uses a short-lived JWT access token stored in an HTTP-only cookie.
-The browser cannot read the token through JavaScript, and the API reloads the user
-from the database on every authenticated request so deleted or inactive accounts
-lose access immediately. Manager authorization is enforced by reusable backend
-dependencies rather than by frontend behavior.
-
-The authentication endpoints are:
-
-- `POST /api/v1/auth/login`
-- `POST /api/v1/auth/logout`
-- `GET /api/v1/auth/me`
-- `POST /api/v1/auth/change-password`
-
-Managers reset an account through `POST /api/v1/users/{id}/reset-password`. Both password workflows invalidate existing sessions. Repeated failures cause a temporary login cooldown; see `SECURITY.md`.
-
-Configure authentication in `backend/.env`:
-
-| Variable | Development example | Purpose |
-| --- | --- | --- |
-| `AUTH_SECRET_KEY` | `development-only-change-me-use-32-bytes` | Signs access tokens |
-| `ACCESS_TOKEN_EXPIRE_MINUTES` | `15` | Access-token and cookie lifetime |
-| `AUTH_COOKIE_NAME` | `stationstock_access_token` | Authentication cookie name |
-| `AUTH_COOKIE_SECURE` | `false` | Allows local HTTP cookies |
-| `AUTH_COOKIE_SAMESITE` | `lax` | Cross-site cookie protection |
-| `ALLOWED_FRONTEND_ORIGIN` | `http://localhost:3000` | Credentialed browser origin |
-
-Production refuses the documented development secret and always enables secure
-cookies. Use a strong, randomly generated `AUTH_SECRET_KEY` in every deployed
-environment. Never use the example secret, database password, or seed credentials
-in production.
-
-## Development users
-
-Apply migrations and seed the full Core MVP demo dataset:
-
-```sh
-alembic -c backend/alembic.ini upgrade head
-python -m app.scripts.seed_demo_data
-```
-
-The demo seed command is explicit and idempotent. It preserves existing records,
-creates missing development users, six categories, three vendors, 21 products,
-and two submitted count sessions. The resulting catalog includes low-stock,
-adequately stocked, and uncounted products. It does not run at application startup.
-
-To create only the two accounts, run `python -m app.scripts.seed_users`.
-
-Development-only credentials:
-
-| Role | Email | Password |
-| --- | --- | --- |
-| Manager | `manager@stationstock.local` | `StationStockDev!2026` |
-| Employee | `employee@stationstock.local` | `StationStockDev!2026` |
-
-All seeded accounts, credentials, vendors, catalog records, and count sessions
-are for development only.
-
-## Core MVP API
-
-Interactive OpenAPI documentation is available at `http://localhost:8000/docs`
-while the backend is running. Except for health and login, endpoints require the
-authentication cookie returned by `POST /api/v1/auth/login`.
-
-Production disables `/docs`, `/redoc`, and `/openapi.json` by default. The sanitized audit feed is manager-only at `GET /api/v1/audit-logs`.
-
-## Deferred production enhancement
-
-CSV product import is intentionally deferred to the first post-deployment enhancement. A safe implementation needs atomic import, dry-run preview, exact category/vendor matching, upload limits, duplicate-SKU checks in both file and database, row-level errors, and audit coverage. Manual catalog entry is safer for initial launch than a partial importer.
-
-| Area | Endpoints | Read access | Write access |
-| --- | --- | --- | --- |
-| Users | `/api/v1/users` | Manager | Manager |
-| Categories | `/api/v1/categories` | Employee or manager | Manager |
-| Vendors | `/api/v1/vendors` | Employee or manager | Manager |
-| Products | `/api/v1/products` | Employee or manager | Manager |
-| Product history | `/api/v1/products/{id}/count-history` | Employee or manager | None |
-| Inventory counts | `/api/v1/inventory-counts` | Employee or manager | Draft owner or manager |
-| Low-stock alerts | `/api/v1/alerts/low-stock` | Employee or manager | None |
-| Dashboard | `/api/v1/dashboard/summary` | Employee or manager | None |
-
-Categories, vendors, products, and users are deactivated rather than deleted.
-Inventory counts expose draft creation, note editing, item upsert/removal, and
-submission endpoints. A submitted count is permanently read-only.
-
-### Pagination and filters
-
-List endpoints accept `page` (default `1`) and `page_size` (default `20`, maximum
-`100`) and return:
-
-```json
-{
-  "items": [],
-  "page": 1,
-  "page_size": 20,
-  "total": 0,
-  "pages": 0
-}
-```
-
-Catalog lists support text search and active-state filters. Products additionally
-support category, preferred vendor, counted/uncounted, and low-stock filters.
-Inventory-count lists support status, starter, and created-date filters. Low-stock
-alerts support category and preferred-vendor filters.
-
-### Inventory rules
-
-- Latest quantity comes only from the newest submitted count item.
-- Draft counts never affect official inventory.
-- A product without a submitted item is uncounted; its quantity, low-stock state,
-  and reorder recommendation are `null`, never silently zero.
-- A counted product is low stock when `latest_quantity < minimum_quantity`.
-- Recommended reorder quantity is
-  `max(target_quantity - latest_quantity, 0)`.
-- Alerts are ordered by largest shortage to target, then SKU.
-- Employees may edit only drafts they started; managers may edit any draft.
-- Submission requires at least one item and atomically records submitted status,
-  timestamp, and submitting user.
-
-## Running and testing the backend
-
-After activating the backend virtual environment, start the API from the
-repository root:
-
-```sh
-uvicorn app.main:app --app-dir backend --reload
-```
-
-Run all backend tests:
+Quality checks:
 
 ```sh
 python -m pytest backend/tests
+cd frontend
+npm test
+npm run lint
+npm run typecheck
+npm run build
 ```
 
-Run only authentication and authorization tests:
+## Testing and production safeguards
 
-```sh
-python -m pytest backend/tests/test_auth.py backend/tests/test_passwords.py
-```
+The automated suites cover authentication, inactive-user rejection, role authorization, password/session invalidation, catalog operations, draft ownership, submission immutability, inventory calculations, production configuration, and seed rejection. Production disables API docs, restricts credentialed CORS to the deployed HTTPS origin, generates secrets outside Git, and starts with migrations only—no users or demo data.
 
-Run Core API and workflow tests:
+Deployment evidence and dated results are kept in [the validation report](VALIDATION_REPORT.md). Browser acceptance items are tracked in [the manual checklist](MANUAL_ACCEPTANCE_CHECKLIST.md).
 
-```sh
-python -m pytest backend/tests/test_users_api.py \
-  backend/tests/test_categories_api.py \
-  backend/tests/test_vendors_api.py \
-  backend/tests/test_products_api.py \
-  backend/tests/test_inventory_counts_api.py \
-  backend/tests/test_alerts_dashboard_api.py
-```
+## Screenshots
 
-With the API running, log in manually and store the returned cookie:
+Screenshots are intentionally not fabricated. The deployed pilot currently has no manager or store data, so authenticated screens cannot be captured safely yet. See the [sanitized screenshot checklist](docs/SCREENSHOTS.md); approved images will live in `docs/images/`.
 
-```sh
-curl -i -c stationstock-cookies.txt \
-  -H "Content-Type: application/json" \
-  -d '{"email":"manager@stationstock.local","password":"StationStockDev!2026"}' \
-  http://localhost:8000/api/v1/auth/login
-```
+## Known limitations
 
-Use the stored cookie to request the current user:
+- The single EC2 host and local PostgreSQL volume are a single failure domain.
+- Login throttling is process-local rather than shared across replicas.
+- Quantities are whole numbers, and catalog selectors load the first 100 active records.
+- CSV import, barcode scanning, delivery reconciliation, expiration tracking, offline mode, and an audit-log frontend are not implemented.
+- Automated browser end-to-end and responsive visual-regression tests are not configured.
 
-```sh
-curl -b stationstock-cookies.txt http://localhost:8000/api/v1/auth/me
-```
+## What I would build next
 
-Docker is required for live PostgreSQL migration, connectivity, seed, and API
-validation. The unit and HTTP behavior tests can run without Docker, but SQLite
-test databases do not replace final PostgreSQL runtime validation.
+- Atomic CSV import with dry-run validation
+- Barcode-assisted counting
+- Delivery and purchase-order reconciliation
+- Lot and expiration tracking
+- Manager-facing audit-log views
+- Managed PostgreSQL with tested point-in-time recovery
+- Shared rate limiting for horizontal scaling
 
-## Extended MVP roadmap
+## Additional documentation
 
-Expiration tracking, purchase orders, vendor deliveries, and related reporting
-are intentionally outside the validated Core MVP and have no placeholder UI.
+- [Architecture details](ARCHITECTURE.md)
+- [API contract](frontend/API_CONTRACT.md)
+- [Store onboarding](STORE_ONBOARDING.md)
+- [Security model](SECURITY.md)
+- [Backup and restore](BACKUP_AND_RESTORE.md)
+- [Project scope](PROJECT_PLAN.md)
