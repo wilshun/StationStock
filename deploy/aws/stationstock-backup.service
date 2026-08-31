@@ -1,0 +1,13 @@
+[Unit]
+Description=Back up StationStock PostgreSQL to S3
+Requires=stationstock.service
+After=stationstock.service network-online.target
+
+[Service]
+Type=oneshot
+User=root
+WorkingDirectory=/opt/stationstock
+EnvironmentFile=/opt/stationstock/.env.aws
+ExecStart=/opt/stationstock/deploy/aws/backup-to-s3.sh
+PrivateTmp=true
+NoNewPrivileges=true

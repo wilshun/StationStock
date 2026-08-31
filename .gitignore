@@ -7,8 +7,20 @@ __pycache__/
 .env
 .env.*
 !.env.production.example
+!.env.aws.example
+!frontend/.env.example
 *.dump
+*.backup
+*.bak
 backups/
+.deployment/
+
+# Certificates and private keys
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
 
 # Node
 node_modules/

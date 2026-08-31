@@ -1,0 +1,26 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "ListStationStockBucket",
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetBucketLocation",
+        "s3:ListBucket"
+      ],
+      "Resource": "arn:aws:s3:::stationstock-prod-backups-000000000000-us-east-1"
+    },
+    {
+      "Sid": "ReadDeploymentAndManageBackups",
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetObject",
+        "s3:PutObject"
+      ],
+      "Resource": [
+        "arn:aws:s3:::stationstock-prod-backups-000000000000-us-east-1/deploy/*",
+        "arn:aws:s3:::stationstock-prod-backups-000000000000-us-east-1/daily/*"
+      ]
+    }
+  ]
+}

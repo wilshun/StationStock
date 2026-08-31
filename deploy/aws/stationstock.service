@@ -1,0 +1,18 @@
+[Unit]
+Description=StationStock production stack
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/opt/stationstock
+EnvironmentFile=/opt/stationstock/.env.aws
+ExecStart=/usr/bin/docker compose --env-file /opt/stationstock/.env.aws -f /opt/stationstock/deploy/aws/docker-compose.aws.yml up -d --build
+ExecReload=/usr/bin/docker compose --env-file /opt/stationstock/.env.aws -f /opt/stationstock/deploy/aws/docker-compose.aws.yml up -d --build
+ExecStop=/usr/bin/docker compose --env-file /opt/stationstock/.env.aws -f /opt/stationstock/deploy/aws/docker-compose.aws.yml down
+TimeoutStartSec=0
+
+[Install]
+WantedBy=multi-user.target

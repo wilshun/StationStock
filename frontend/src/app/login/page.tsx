@@ -22,6 +22,9 @@ const loginSchema = z.object({
 type LoginValues = z.infer<typeof loginSchema>;
 
 function LoginForm() {
+  const developmentDemoEmail = process.env.NEXT_PUBLIC_DEMO_EMAIL;
+  const developmentDemoPassword = process.env.NEXT_PUBLIC_DEMO_PASSWORD;
+  const showDevelopmentDemo = process.env.NODE_ENV === "development" && Boolean(developmentDemoEmail && developmentDemoPassword);
   const { login, user, loading } = useAuth();
   const router = useRouter();
   const params = useSearchParams();
@@ -48,7 +51,7 @@ function LoginForm() {
       <section className="hidden p-12 text-white lg:flex lg:flex-col lg:justify-between">
         <div className="flex items-center gap-3"><span className="grid size-11 place-items-center rounded-xl bg-emerald-500 text-slate-950"><Boxes /></span><span className="text-xl font-semibold">StationStock</span></div>
         <div className="max-w-xl"><p className="text-sm font-semibold uppercase tracking-[0.22em] text-emerald-400">Know what is on the shelf</p><h1 className="mt-5 text-5xl font-semibold leading-tight tracking-tight">Count faster. Restock with confidence.</h1><p className="mt-5 text-lg leading-8 text-slate-300">A focused inventory workspace for convenience-store teams.</p></div>
-        <p className="text-sm text-slate-400">Core MVP · Local development environment</p>
+        <p className="text-sm text-slate-400">Core MVP{showDevelopmentDemo ? " · Local development environment" : ""}</p>
       </section>
       <section className="flex items-center justify-center bg-slate-50 p-5 sm:p-10">
         <Card className="w-full max-w-md border-slate-200 shadow-xl shadow-slate-950/5">
@@ -60,7 +63,7 @@ function LoginForm() {
               <div className="space-y-2"><Label htmlFor="password">Password</Label><Input id="password" type="password" autoComplete="current-password" aria-invalid={Boolean(errors.password)} aria-describedby={errors.password ? "password-error" : undefined} {...register("password")} />{errors.password && <p id="password-error" className="text-sm text-red-600">{errors.password.message}</p>}</div>
               <Button type="submit" className="min-h-11 w-full bg-emerald-700 hover:bg-emerald-800" disabled={isSubmitting}>{isSubmitting ? "Signing in…" : "Sign in"}</Button>
             </form>
-            <div className="mt-6 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950"><p className="font-medium">Development demo only</p><p className="mt-1">Manager: manager@stationstock.local</p><p>Password: StationStockDev!2026</p></div>
+            {showDevelopmentDemo && <div className="mt-6 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950"><p className="font-medium">Development demo only</p><p className="mt-1">Manager: {developmentDemoEmail}</p><p>Password: {developmentDemoPassword}</p></div>}
           </CardContent>
         </Card>
       </section>

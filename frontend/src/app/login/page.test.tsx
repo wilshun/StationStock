@@ -6,6 +6,7 @@ const login=vi.fn();
 vi.mock("@/components/auth/auth-provider",()=>({useAuth:()=>({login,user:null,loading:false})}));
 describe("login",()=>{
  beforeEach(()=>login.mockReset());
+ it("does not expose development demo credentials outside development",()=>{render(<LoginPage/>);expect(screen.queryByText("Development demo only")).not.toBeInTheDocument();expect(screen.queryByText(/manager@stationstock\.local/i)).not.toBeInTheDocument();expect(screen.queryByText(/StationStockDev/i)).not.toBeInTheDocument()});
  it("validates required credentials",async()=>{render(<LoginPage/>);fireEvent.click(screen.getByRole("button",{name:"Sign in"}));expect(await screen.findByText("Enter your email address")).toBeVisible();expect(screen.getByText("Enter your password")).toBeVisible()});
  it("submits valid credentials",async()=>{login.mockResolvedValue({});render(<LoginPage/>);await userEvent.type(screen.getByLabelText("Email"),"manager@example.com");await userEvent.type(screen.getByLabelText("Password"),"secret123");await userEvent.click(screen.getByRole("button",{name:"Sign in"}));await waitFor(()=>expect(login).toHaveBeenCalledWith("manager@example.com","secret123"))});
 });
