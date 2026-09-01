@@ -1,14 +1,32 @@
-# Sanitized screenshot checklist
+# Application screenshots
 
-No screenshots are checked in yet. Do not capture authenticated screens until a manager exists and the database contains only fake, clearly labeled portfolio data.
+The screenshots below use portfolio data and have been sanitized to remove personal email addresses.
 
-Add PNG or WebP images to `docs/images/` and verify each image visually before committing it.
+## Dashboard
+
+![StationStock dashboard showing inventory metrics, priority restocks, and recent counts](images/dashboard.png)
+
+## Products
+
+![Products catalog with inventory quantities, stock status, and reorder amounts](images/products.png)
+
+## Inventory counts
+
+![Inventory count history with submitted count sessions](images/inventory-count.png)
+
+## Low stock
+
+![Low-stock report showing on-hand quantities and recommended reorder amounts](images/low-stock.png)
+
+## User management
+
+![User management page showing employee roles and account status](images/user-management.png)
+
+## Remaining screenshot checklist
 
 - [ ] Login page after confirming no demo credentials appear
-- [ ] Dashboard at desktop and narrow mobile widths
-- [ ] Products page with a low-stock filter and fake catalog data
+- [ ] Dashboard at a narrow mobile width
 - [ ] Inventory-count draft, save, and submission confirmation
-- [ ] Manager user administration with fake names and example-domain emails
 - [ ] Browser storage view confirming no token in local or session storage
 - [ ] Network response showing a Secure, HTTP-only cookie without exposing its value
 
